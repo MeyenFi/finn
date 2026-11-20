@@ -94,6 +94,9 @@ svg.i{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-l
 .ev-title .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ev-title .rep{color:var(--ter)}
 .now{margin-left:auto;font-size:11px;font-weight:800;color:#000;padding:3px 8px;border-radius:99px}
+.quick{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 16px;border-radius:16px;background:var(--card);border:1px solid;margin-bottom:20px}
+.quick input{flex:1;min-width:0;background:none;border:0;outline:none;font-size:17px;color:#fff}
+.quick button{width:40px;height:40px;border-radius:12px;color:#000;display:grid;place-items:center;flex-shrink:0}
 .ev-note{font-size:13px;color:var(--sec);margin-top:4px}
 
 /* Sport */
@@ -212,9 +215,10 @@ svg.i{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-l
 const TINTS={blue:'#5ca8ff',purple:'#a880ff',pink:'#ff73bf',red:'#ff6b6b',orange:'#ff9e4d',yellow:'#ffd95a',green:'#38eb8f',teal:'#4de0e6'};
 const CATS={
   calendar:{title:'Tagesablauf',icon:'calendar',c1:'#5ca8ff',c2:'#9478ff'},
-  sport:{title:'Sport',icon:'dumbbell',c1:'#38eb8f',c2:'#c7f54d'}
+  sport:{title:'Sport',icon:'dumbbell',c1:'#38eb8f',c2:'#c7f54d'},
+  todo:{title:'To-Do',icon:'checklist',c1:'#ff9e4d',c2:'#ffd95a'}
 };
-const PLACEHOLDERS=4; // leere Ordner – später durch echte Kategorien ersetzen
+const PLACEHOLDERS=3; // leere Ordner – später durch echte Kategorien ersetzen
 const WD_ORDER=[1,2,3,4,5,6,0];
 const WD_SHORT=['So','Mo','Di','Mi','Do','Fr','Sa'];
 const REPEAT={none:'Nie',daily:'Täglich',weekdays:'Werktags',weekly:'Wöchentlich'};
@@ -234,6 +238,7 @@ const ICONS={
   trash:'<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/>',
   moon:'<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  checklist:'<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5L7.5 11M3.5 18l1.5 1.5L7.5 17"/>',
   dashed:'<rect x="3" y="3" width="18" height="18" rx="4" stroke-dasharray="4 3"/>',
   sliders:'<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
   circle:'<circle cx="12" cy="12" r="10"/>',
@@ -260,14 +265,15 @@ const $=id=>document.getElementById(id);
 const val=id=>$(id).value;
 
 /* ===== Version (bei jedem Update erhöhen) ===== */
-const APP_VERSION='1.2';
-const APP_CHANGES='Neu: Backup sichern & wiederherstellen – tippe auf die Zeile unter „Hallo, Finn“.';
+const APP_VERSION='1.3';
+const APP_CHANGES='Neu: Ordner „To-Do“ für deine Aufgaben.';
 
 /* ===== Daten: lokal (sofort) + Cloud-Datenbank (dauerhaft, geräteübergreifend) ===== */
 const KEY='finnapp-v1';
 let S=load();
 function valid(s){return s&&Array.isArray(s.events)&&Array.isArray(s.workouts)}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(valid(s))return s}catch(e){}return sample()}
+function migrate(s){if(!Array.isArray(s.todos))s.todos=[];return s}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(valid(s))return migrate(s)}catch(e){}return migrate(sample())}
 function save(){
   S.updatedAt=Date.now();
   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
@@ -306,7 +312,7 @@ async function initCloud(){
         const s=JSON.parse(d.json);
         if(valid(s)){
           if((s.updatedAt||0)>=(S.updatedAt||0)){
-            S=s;sync.lastJson=d.json;
+            S=migrate(s);sync.lastJson=d.json;
             try{localStorage.setItem(KEY,d.json)}catch(e){}
             if(!sheet)render();
           }else cloudSave();
@@ -361,7 +367,7 @@ let ui={sel:new Date(),edit:false};
 let lastRoute=null;
 function route(){
   const h=location.hash.slice(1);
-  if(h==='calendar'||h==='sport')return{name:h};
+  if(h==='calendar'||h==='sport'||h==='todo')return{name:h};
   if(h.startsWith('workout-'))return{name:'workout',arg:h.slice(8)};
   if(h.startsWith('p-'))return{name:'p',arg:+h.slice(2)};
   return{name:'home'};
@@ -374,6 +380,7 @@ function render(){
   switch(r.name){
     case'calendar':html=calendarView();break;
     case'sport':html=sportView();break;
+    case'todo':html=todoView();break;
     case'workout':html=workoutView(r.arg);break;
     case'p':html=placeholderView(r.arg);break;
     default:html=homeView();
@@ -423,6 +430,7 @@ function homeView(){
   <div class="section"><div class="label">Ordner</div><div class="grid">
     ${catCard('calendar',n?`${n} Termin${n===1?'':'e'} heute`:'Heute keine Termine')}
     ${catCard('sport',tr.length?'Heute: '+tr.map(w=>w.name).join(', '):'Heute Ruhetag')}
+    ${catCard('todo',todoSummary())}
     ${Array.from({length:PLACEHOLDERS},(_,i)=>`<a class="ph press" href="#p-${i+1}"><div class="ph-ic">${I('plus',20)}</div><b>Platzhalter ${i+1}</b><span>Frei für eine neue Kategorie</span></a>`).join('')}
   </div></div>`;
 }
@@ -499,6 +507,61 @@ function workoutView(id){
   </div>
   <p class="foot">Tippen zum Bearbeiten · Kreis zum Abhaken · „Bearbeiten“ zum Sortieren und Löschen</p>`;
 }
+
+/* ===== To-Do ===== */
+const fmtD=d=>parseYmd(d).toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'});
+function dueLabel(d){
+  if(!d)return null;
+  const t=ymd(new Date());
+  if(d<t)return['Überfällig · '+fmtD(d),'#ff6b6b'];
+  if(d===t)return['Heute','#ffd95a'];
+  if(d===ymd(addDays(new Date(),1)))return['Morgen',CATS.todo.c1];
+  return[fmtD(d),'var(--sec)'];
+}
+function todoSummary(){
+  const open=S.todos.filter(x=>!x.done),t=ymd(new Date());
+  const due=open.filter(x=>x.due&&x.due<=t).length;
+  return open.length?`${open.length} offen${due?` · ${due} fällig`:''}`:'Alles erledigt';
+}
+function todoRow(x,c){
+  const d=dueLabel(x.due);
+  return `<div class="row ex"><button class="chk" data-a="toggleTodo" data-v="${x.id}" style="color:${x.done?c.c1:'var(--ter)'}">${I(x.done?'checkCircle':'circle',27)}</button>
+  <div class="ex-b" data-a="editTodo" data-v="${x.id}"><div class="ex-n ${x.done?'done':''}">${esc(x.title)}</div>${d&&!x.done?`<div class="ex-s" style="color:${d[1]}">${d[0]}</div>`:''}${x.note?`<div class="ex-note">${esc(x.note)}</div>`:''}</div></div>`;
+}
+function todoView(){
+  const c=CATS.todo;
+  const open=S.todos.filter(x=>!x.done).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')||(a.created||0)-(b.created||0));
+  const done=S.todos.filter(x=>x.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  return `${topbar('',`<button data-a="newTodo" style="color:${c.c1}">${I('plusCircle',30)}</button>`,c.c1)}
+  ${header(c,open.length?`${open.length} Aufgabe${open.length===1?'':'n'} offen`:'Alles erledigt 🎉')}
+  <form class="quick" data-form="quickTodo" style="border-color:${rgba(c.c1,.25)}"><input id="q-todo" type="text" placeholder="Neue Aufgabe …" enterkeyhint="done" autocomplete="off"><button type="submit" style="background:${c.c1}">${I('plus',20)}</button></form>
+  ${open.length?`<div class="group">${open.map(x=>todoRow(x,c)).join('')}</div>`:empty('checklist','Nichts zu tun','Tippe oben eine Aufgabe ein.',c.c1)}
+  ${done.length?`<div class="lhead"><span>Erledigt (${done.length})</span><button data-a="clearDone" style="color:${c.c1}">Leeren</button></div><div class="group">${done.slice(0,20).map(x=>todoRow(x,c)).join('')}</div>`:''}`;
+}
+function openTodoEditor(x){
+  const isNew=!x,c=CATS.todo;
+  draft=x?{...x}:{id:uid(),title:'',note:'',due:'',done:false,created:Date.now()};
+  const body=`
+  <div class="group"><div class="row"><input type="text" class="big" id="f-title" placeholder="Aufgabe" value="${esc(draft.title)}"></div>
+    <div class="row"><textarea id="f-note" rows="2" placeholder="Notiz (optional)">${esc(draft.note)}</textarea></div></div>
+  <div class="glabel">Fällig</div>
+  <div class="group"><div class="row"><span>Datum</span><div style="display:flex;gap:8px;align-items:center"><input type="date" id="f-due" value="${draft.due||''}"><button data-a="clearDue" style="color:var(--sec);font-size:14px">Keins</button></div></div></div>
+  ${isNew?'':`<button class="danger" data-a="delTodo">Aufgabe löschen</button>`}`;
+  openSheet(isNew?'Neue Aufgabe':'Aufgabe bearbeiten',body,c.c1,()=>{
+    const title=val('f-title').trim();
+    if(!title){shake('f-title');return false}
+    Object.assign(draft,{title,note:val('f-note').trim(),due:val('f-due')||''});
+    upsert(S.todos,draft);save();render();
+  });
+}
+document.addEventListener('submit',e=>{
+  if(e.target.dataset.form!=='quickTodo')return;
+  e.preventDefault();
+  const v=$('q-todo').value.trim();if(!v)return;
+  S.todos.push({id:uid(),title:v,note:'',due:'',done:false,created:Date.now()});
+  save();render();
+  const q=$('q-todo');if(q)q.focus();
+});
 
 /* ===== Platzhalter ===== */
 function placeholderView(n){
@@ -640,7 +703,7 @@ function importData(file){
     let s=null;try{s=JSON.parse(r.result)}catch(e){}
     if(!valid(s)){toast('Das ist keine gültige Finn-Backup-Datei.');return}
     confirmDialog(`Backup laden? (${s.events.length} Termine, ${s.workouts.length} Trainings) – die aktuellen Daten werden ersetzt.`,()=>{
-      S=s;save();closeSheet();render();toast('✅ Backup geladen');
+      S=migrate(s);save();closeSheet();render();toast('✅ Backup geladen');
     },'Laden');
   };
   r.readAsText(file);
@@ -657,6 +720,12 @@ const A={
   editEvent:v=>openEventEditor(S.events.find(e=>e.id===v)),
   delEvent:()=>confirmDialog('Termin wirklich löschen?',()=>{const id=draft.id;S.events=S.events.filter(e=>e.id!==id);save();closeSheet();render()}),
   newWorkout:()=>openWorkoutEditor(null),
+  newTodo:()=>openTodoEditor(null),
+  editTodo:v=>openTodoEditor(S.todos.find(x=>x.id===v)),
+  toggleTodo:v=>{const x=S.todos.find(t=>t.id===v);x.done=!x.done;x.doneAt=x.done?Date.now():0;save();render()},
+  clearDue:()=>{$('f-due').value=''},
+  delTodo:()=>confirmDialog('Aufgabe wirklich löschen?',()=>{const id=draft.id;S.todos=S.todos.filter(x=>x.id!==id);save();closeSheet();render()}),
+  clearDone:()=>confirmDialog('Alle erledigten Aufgaben löschen?',()=>{S.todos=S.todos.filter(x=>!x.done);save();render()}),
   editWorkout:v=>openWorkoutEditor(S.workouts.find(w=>w.id===v)),
   delWorkout:()=>confirmDialog('Training mit allen Übungen löschen?',()=>{const id=draft.id;S.workouts=S.workouts.filter(w=>w.id!==id);save();closeSheet();go('sport')}),
   toggleEdit:()=>{ui.edit=!ui.edit;render()},
