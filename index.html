@@ -97,6 +97,15 @@ svg.i{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-l
 .quick{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 16px;border-radius:16px;background:var(--card);border:1px solid;margin-bottom:20px}
 .quick input{flex:1;min-width:0;background:none;border:0;outline:none;font-size:17px;color:#fff}
 .quick button{width:40px;height:40px;border-radius:12px;color:#000;display:grid;place-items:center;flex-shrink:0}
+.abar{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:16px;background:var(--card);border:1px solid rgba(255,255,255,.1);margin-bottom:18px;text-align:left}
+.ab-main{flex:1;display:flex;align-items:center;gap:12px;text-align:left;min-width:0}
+.ab-t{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.ab-t b{font-size:15px}.ab-t small{font-size:12px;color:var(--sec)}
+.abadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:rgba(255,107,107,.18);color:#ff8a8a;flex-shrink:0}
+.pastebar{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 16px);max-width:528px;margin:0 auto;z-index:80;display:flex;border-radius:18px;background:#ff9e4d;color:#000;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:up .35s;overflow:hidden}
+.pastebar button{padding:16px;font-weight:700;font-size:16px}
+.pastebar button:first-child{flex:1;text-align:left}
+.pastebar button:last-child{border-left:1px solid rgba(0,0,0,.15)}
 .ev-note{font-size:13px;color:var(--sec);margin-top:4px}
 
 /* Sport */
@@ -238,6 +247,8 @@ const ICONS={
   trash:'<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/>',
   moon:'<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  sync:'<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   checklist:'<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5L7.5 11M3.5 18l1.5 1.5L7.5 17"/>',
   dashed:'<rect x="3" y="3" width="18" height="18" rx="4" stroke-dasharray="4 3"/>',
   sliders:'<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
@@ -265,14 +276,20 @@ const $=id=>document.getElementById(id);
 const val=id=>$(id).value;
 
 /* ===== Version (bei jedem Update erhöhen) ===== */
-const APP_VERSION='1.3';
-const APP_CHANGES='Neu: Ordner „To-Do“ für deine Aufgaben.';
+const APP_VERSION='1.4';
+const APP_CHANGES='Neu: Verbindung zu Apple Erinnerungen & Kalender (über den Kurzbefehl „Finn Sync“).';
 
 /* ===== Daten: lokal (sofort) + Cloud-Datenbank (dauerhaft, geräteübergreifend) ===== */
 const KEY='finnapp-v1';
 let S=load();
 function valid(s){return s&&Array.isArray(s.events)&&Array.isArray(s.workouts)}
-function migrate(s){if(!Array.isArray(s.todos))s.todos=[];return s}
+function migrate(s){
+  if(!Array.isArray(s.todos))s.todos=[];
+  if(!s.apple||typeof s.apple!=='object')s.apple={};
+  const a=s.apple;a.enabled=!!a.enabled;a.lastSync=a.lastSync||0;a.events=Array.isArray(a.events)?a.events:[];
+  a.queue=a.queue&&Array.isArray(a.queue.neu)?a.queue:{neu:[],erledigt:[],termine:[]};
+  return s;
+}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(valid(s))return migrate(s)}catch(e){}return migrate(sample())}
 function save(){
   S.updatedAt=Date.now();
@@ -354,7 +371,7 @@ function occurs(e,day){
     default:return d===e.date;
   }
 }
-const eventsOn=day=>S.events.filter(e=>occurs(e,day)).sort((a,b)=>a.start.localeCompare(b.start));
+const eventsOn=day=>S.events.filter(e=>occurs(e,day)).concat(appleOn(day)).sort((a,b)=>a.start.localeCompare(b.start));
 const workoutsOn=day=>S.workouts.filter(w=>w.days.includes(day.getDay()));
 const nextEvent=()=>{const n=nowMin();return eventsOn(new Date()).find(e=>toMin(e.end)>n)};
 const upsert=(arr,item)=>{const i=arr.findIndex(x=>x.id===item.id);if(i>=0)arr[i]=item;else arr.push(item)};
@@ -444,6 +461,7 @@ function calendarView(){
   const pastDay=ymd(sel)<ymd(today);
   return `${topbar('',`<button data-a="newEvent" style="color:${c.c1}">${I('plusCircle',30)}</button>`,c.c1)}
   ${header(c,'Dein Tag im Überblick')}
+  ${appleBar('Kalender',c.c1)}
   <div class="weeknav"><span>${monthYear(sel)}</span><div>
     <button data-a="week" data-v="-1" style="color:${c.c1}">${I('chevL',22)}</button>
     <button data-a="week" data-v="1" style="color:${c.c1}">${I('chevR',22)}</button></div></div>
@@ -457,9 +475,9 @@ function calendarView(){
       const t=TINTS[e.tint]||c.c1;
       const now=isToday&&toMin(e.start)<=n&&n<toMin(e.end);
       const past=pastDay||(isToday&&toMin(e.end)<=n);
-      return `<div class="ev press" data-a="editEvent" data-v="${e.id}" style="background:${now?rgba(t,.15):'var(--card)'};border-color:${rgba(t,now?.55:.15)};opacity:${past?.5:1}">
+      return `<div class="ev press" data-a="${e.apple?'appleEvent':'editEvent'}" data-v="${e.id}" style="background:${now?rgba(t,.15):'var(--card)'};border-color:${rgba(t,now?.55:.15)};opacity:${past?.5:1}">
         <div class="ev-time"><b>${e.start}</b><span>${e.end}</span></div><div class="ev-bar" style="background:${t}"></div>
-        <div class="ev-body"><div class="ev-title"><span class="name">${esc(e.title)}</span>${e.repeat!=='none'?`<span class="rep">${I('repeat',12)}</span>`:''}${now?`<span class="now" style="background:${t}">JETZT</span>`:''}</div>
+        <div class="ev-body"><div class="ev-title"><span class="name">${esc(e.title)}</span>${e.apple?'<span class="abadge">Kalender</span>':''}${e.repeat!=='none'?`<span class="rep">${I('repeat',12)}</span>`:''}${now?`<span class="now" style="background:${t}">JETZT</span>`:''}</div>
         ${e.note?`<div class="ev-note">${esc(e.note)}</div>`:''}</div></div>`}).join('')}</div>`
     :empty('sun','Freier Tag','Für diesen Tag ist noch nichts geplant.',c.c1,'Termin hinzufügen','newEvent')}`;
 }
@@ -534,6 +552,7 @@ function todoView(){
   const done=S.todos.filter(x=>x.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   return `${topbar('',`<button data-a="newTodo" style="color:${c.c1}">${I('plusCircle',30)}</button>`,c.c1)}
   ${header(c,open.length?`${open.length} Aufgabe${open.length===1?'':'n'} offen`:'Alles erledigt 🎉')}
+  ${appleBar('Erinnerungen',c.c1)}
   <form class="quick" data-form="quickTodo" style="border-color:${rgba(c.c1,.25)}"><input id="q-todo" type="text" placeholder="Neue Aufgabe …" enterkeyhint="done" autocomplete="off"><button type="submit" style="background:${c.c1}">${I('plus',20)}</button></form>
   ${open.length?`<div class="group">${open.map(x=>todoRow(x,c)).join('')}</div>`:empty('checklist','Nichts zu tun','Tippe oben eine Aufgabe ein.',c.c1)}
   ${done.length?`<div class="lhead"><span>Erledigt (${done.length})</span><button data-a="clearDone" style="color:${c.c1}">Leeren</button></div><div class="group">${done.slice(0,20).map(x=>todoRow(x,c)).join('')}</div>`:''}`;
@@ -551,6 +570,7 @@ function openTodoEditor(x){
     const title=val('f-title').trim();
     if(!title){shake('f-title');return false}
     Object.assign(draft,{title,note:val('f-note').trim(),due:val('f-due')||''});
+    if(isNew&&S.apple.enabled){draft.apple=true;AQ().neu.push(title)}
     upsert(S.todos,draft);save();render();
   });
 }
@@ -558,10 +578,96 @@ document.addEventListener('submit',e=>{
   if(e.target.dataset.form!=='quickTodo')return;
   e.preventDefault();
   const v=$('q-todo').value.trim();if(!v)return;
-  S.todos.push({id:uid(),title:v,note:'',due:'',done:false,created:Date.now()});
+  S.todos.push({id:uid(),title:v,note:'',due:'',done:false,created:Date.now(),apple:S.apple.enabled});
+  if(S.apple.enabled)AQ().neu.push(v);
   save();render();
   const q=$('q-todo');if(q)q.focus();
 });
+
+/* ===== Apple Erinnerungen & Kalender (über Kurzbefehl „Finn Sync“) ===== */
+const APPLE_SHORTCUT='Finn Sync';
+const AQ=()=>S.apple.queue;
+const emptyQ=()=>({neu:[],erledigt:[],termine:[]});
+function qCount(){const q=AQ(),s=S.apple.sent||emptyQ();return q.neu.length+q.erledigt.length+q.termine.length+s.neu.length+s.erledigt.length+s.termine.length}
+function appleBar(what,tint){
+  if(!S.apple.enabled)return `<button class="abar press" data-a="appleSetup"><span style="color:${tint}">${I('link',20)}</span><span class="ab-t"><b>Mit Apple ${what} verbinden</b><small>Über den Kurzbefehl „${APPLE_SHORTCUT}“</small></span><span style="color:var(--ter)">${I('chevR',18)}</span></button>`;
+  const n=qCount();
+  const last=S.apple.lastSync?new Date(S.apple.lastSync).toLocaleString('de-DE',{weekday:'short',hour:'2-digit',minute:'2-digit'}):'noch nie';
+  return `<div class="abar" style="border-color:${rgba(tint,.3)}"><button class="ab-main" data-a="appleSync"><span style="color:${tint}">${I('sync',20)}</span><span class="ab-t"><b>Mit Apple abgleichen</b><small>Zuletzt: ${last}${n?` · <span style="color:${tint}">${n} ausstehend</span>`:''}</small></span></button><button class="ab-gear" data-a="appleSetup" style="color:var(--sec)">${I('sliders',20)}</button></div>`;
+}
+function appleOn(day){
+  if(!S.apple||!S.apple.events.length)return[];
+  const d=ymd(day),out=[];
+  S.apple.events.forEach((e,i)=>{
+    const s=new Date(e.start),en=new Date(e.end);
+    if(isNaN(s))return;
+    const okEnd=!isNaN(en)&&en>s;
+    const sd=ymd(s),ed=okEnd?ymd(new Date(en-1)):sd;
+    if(d<sd||d>ed)return;
+    const allDay=okEnd&&s.getHours()===0&&s.getMinutes()===0&&en-s>=86340000;
+    const st=d===sd?`${pad(s.getHours())}:${pad(s.getMinutes())}`:'00:00';
+    const et=okEnd&&d===ymd(en)?`${pad(en.getHours())}:${pad(en.getMinutes())}`:'23:59';
+    if(S.events.some(f=>f.toApple&&f.title===e.title&&f.date===sd&&f.start===st))return;
+    out.push({id:'apple-'+i,title:e.title,start:allDay?'00:00':st,end:allDay?'23:59':et,note:allDay?'Ganztägig':'',tint:'red',repeat:'none',apple:true});
+  });
+  return out;
+}
+function appleSync(){
+  const q=AQ(),s=S.apple.sent||emptyQ();
+  const payload={neu:[...s.neu,...q.neu],erledigt:[...s.erledigt,...q.erledigt],termine:[...s.termine,...q.termine]};
+  S.apple.sent=payload;S.apple.queue=emptyQ();S.apple.awaiting=Date.now();save();
+  location.href='shortcuts://run-shortcut?name='+encodeURIComponent(APPLE_SHORTCUT)+'&input=text&text='+encodeURIComponent(JSON.stringify(payload));
+  setTimeout(showPasteBar,1500);
+}
+function showPasteBar(){
+  if(!S.apple.awaiting||$('pastebar'))return;
+  const d=document.createElement('div');d.id='pastebar';d.className='pastebar';
+  d.innerHTML='<button data-a="applePaste">📋 Ergebnis von Apple übernehmen</button><button data-a="pasteCancel" aria-label="Abbrechen">✕</button>';
+  document.body.appendChild(d);
+}
+async function applePaste(){
+  let t='';
+  try{t=await navigator.clipboard.readText()}catch(e){toast('Kein Zugriff auf die Zwischenablage – bitte „Einfügen“ erlauben.');return}
+  if(!t||!t.trim().startsWith('FINN-SYNC')){toast('Noch kein Ergebnis gefunden – ist der Kurzbefehl „Finn Sync“ durchgelaufen?');return}
+  importApple(t);
+}
+const isoToYmd=v=>{const d=new Date(v);return isNaN(d)?'':ymd(d)};
+function importApple(t){
+  const R=[],K=[];let sec=null;
+  for(const raw of t.split(/\r?\n/)){
+    const l=raw.trim();
+    if(!l||l==='FINN-SYNC')continue;
+    if(l==='#R'){sec='R';continue}
+    if(l==='#K'){sec='K';continue}
+    const p=l.split('|');
+    if(sec==='R'&&p[0].trim())R.push({title:p[0].trim(),due:p[1]?isoToYmd(p[1].trim()):''});
+    if(sec==='K'&&p[0].trim()&&p[1])K.push({title:p[0].trim(),start:p[1].trim(),end:(p[2]||p[1]).trim()});
+  }
+  const titles=new Set(R.map(r=>r.title)),pending=new Set(AQ().neu);
+  let added=0;
+  for(const r of R){
+    const ex=S.todos.find(x=>!x.done&&x.title===r.title);
+    if(ex){ex.apple=true;if(r.due)ex.due=r.due}
+    else{S.todos.push({id:uid(),title:r.title,note:'',due:r.due,done:false,created:Date.now(),apple:true});added++}
+  }
+  let closed=0;
+  for(const x of S.todos)if(x.apple&&!x.done&&!titles.has(x.title)&&!pending.has(x.title)){x.done=true;x.doneAt=Date.now();closed++}
+  S.apple.events=K;S.apple.sent=null;S.apple.awaiting=null;S.apple.lastSync=Date.now();
+  save();render();
+  const pb=$('pastebar');if(pb)pb.remove();
+  toast(`✅ Abgeglichen: ${R.length} Erinnerungen${added?` (${added} neu)`:''}, ${K.length} Termine${closed?` · ${closed} in Apple erledigt`:''}`);
+}
+function openAppleSetup(){
+  const t='#ff9e4d',on=S.apple.enabled;
+  const body=`
+  <div class="group"><div class="row" style="display:block;line-height:1.45">
+    <div class="t1" style="margin-bottom:4px">Apple Erinnerungen & Kalender</div>
+    <div class="t2">Finn tauscht Daten mit Apple über den Kurzbefehl <b style="color:#fff">„${APPLE_SHORTCUT}“</b> aus. Tippe auf „Mit Apple abgleichen“: Neue Aufgaben & Termine werden übertragen, erledigte abgehakt, und Finn liest deine offenen Erinnerungen und die Termine der nächsten 14 Tage. Danach oben links auf „◀ Finn“ tippen und „Ergebnis übernehmen“.</div>
+  </div></div>
+  <button class="danger" data-a="appleToggle" style="background:${on?'rgba(255,107,107,.12)':rgba(t,.18)};color:${on?'#ff6b6b':t}">${on?'Verbindung trennen':'Verbindung aktivieren'}</button>
+  ${on?`<p class="foot">Zuletzt abgeglichen: ${S.apple.lastSync?new Date(S.apple.lastSync).toLocaleString('de-DE'):'noch nie'} · ${qCount()} Änderungen ausstehend</p>`:'<p class="foot">Richte zuerst den Kurzbefehl ein (Anleitung von Claude).</p>'}`;
+  openSheet('Apple-Verbindung',body,t,null);
+}
 
 /* ===== Platzhalter ===== */
 function placeholderView(n){
@@ -612,6 +718,7 @@ function openEventEditor(e){
     <div class="row"><span>Ende</span><input type="time" id="f-end" value="${draft.end}"></div>
     <div class="row"><span>Wiederholen</span><select id="f-rep">${Object.entries(REPEAT).map(([k,l])=>`<option value="${k}" ${k===draft.repeat?'selected':''}>${l}</option>`).join('')}</select></div>
   </div>
+  ${isNew&&S.apple.enabled?`<div class="group"><label class="row"><span>Auch im Apple Kalender</span><input type="checkbox" id="f-apple" checked style="width:22px;height:22px;accent-color:var(--tint)"></label></div><p class="foot">Nur für einmalige Termine. Wird beim nächsten Abgleich übertragen.</p>`:''}
   <div class="glabel">Farbe</div><div class="group"><div class="row">${tintPicker(draft.tint)}</div></div>
   ${isNew?'':`<button class="danger" data-a="delEvent">Termin löschen</button>${draft.repeat!=='none'?'<p class="foot">Änderungen gelten für alle Wiederholungen dieses Termins.</p>':''}`}`;
   openSheet(isNew?'Neuer Termin':'Termin bearbeiten',body,TINTS[draft.tint],()=>{
@@ -619,6 +726,12 @@ function openEventEditor(e){
     if(!title){shake('f-title');return false}
     Object.assign(draft,{title,note:val('f-note').trim(),date:val('f-date')||draft.date,start:val('f-start')||'09:00',end:val('f-end')||'10:00',repeat:val('f-rep')});
     if(toMin(draft.end)<=toMin(draft.start))draft.end=minToT(Math.min(toMin(draft.start)+60,23*60+59));
+    const ap=$('f-apple');
+    if(ap&&ap.checked&&draft.repeat==='none'){
+      draft.toApple=true;
+      const de=d=>{const[y,m,dd]=draft.date.split('-');return `${dd}.${m}.${y} ${d}`};
+      AQ().termine.push({t:title,s:de(draft.start),e:de(draft.end)});
+    }
     upsert(S.events,draft);save();render();
   });
   draft._prevStart=draft.start;
@@ -722,9 +835,23 @@ const A={
   newWorkout:()=>openWorkoutEditor(null),
   newTodo:()=>openTodoEditor(null),
   editTodo:v=>openTodoEditor(S.todos.find(x=>x.id===v)),
-  toggleTodo:v=>{const x=S.todos.find(t=>t.id===v);x.done=!x.done;x.doneAt=x.done?Date.now():0;save();render()},
+  toggleTodo:v=>{
+    const x=S.todos.find(t=>t.id===v);x.done=!x.done;x.doneAt=x.done?Date.now():0;
+    if(x.apple){const q=AQ(),rm=(arr,val)=>{const i=arr.indexOf(val);if(i>=0){arr.splice(i,1);return true}return false};
+      if(x.done){if(!rm(q.neu,x.title))q.erledigt.push(x.title)}else{if(!rm(q.erledigt,x.title))q.neu.push(x.title)}}
+    save();render()},
+  appleSetup:()=>openAppleSetup(),
+  appleSync:()=>appleSync(),
+  applePaste:()=>applePaste(),
+  pasteCancel:()=>{S.apple.awaiting=null;save();const pb=$('pastebar');if(pb)pb.remove()},
+  appleEvent:()=>toast('Termin aus deinem Apple Kalender – ändern kannst du ihn in der Kalender-App.'),
+  appleToggle:()=>{
+    if(S.apple.enabled){S.apple.enabled=false}
+    else{S.apple.enabled=true;S.todos.filter(x=>!x.done&&!x.apple).forEach(x=>{x.apple=true;AQ().neu.push(x.title)})}
+    save();closeSheet();render();
+  },
   clearDue:()=>{$('f-due').value=''},
-  delTodo:()=>confirmDialog('Aufgabe wirklich löschen?',()=>{const id=draft.id;S.todos=S.todos.filter(x=>x.id!==id);save();closeSheet();render()}),
+  delTodo:()=>confirmDialog('Aufgabe wirklich löschen?',()=>{const id=draft.id;const x=S.todos.find(t=>t.id===id);if(x&&x.apple&&!x.done)AQ().erledigt.push(x.title);S.todos=S.todos.filter(x=>x.id!==id);save();closeSheet();render()}),
   clearDone:()=>confirmDialog('Alle erledigten Aufgaben löschen?',()=>{S.todos=S.todos.filter(x=>!x.done);save();render()}),
   editWorkout:v=>openWorkoutEditor(S.workouts.find(w=>w.id===v)),
   delWorkout:()=>confirmDialog('Training mit allen Übungen löschen?',()=>{const id=draft.id;S.workouts=S.workouts.filter(w=>w.id!==id);save();closeSheet();go('sport')}),
@@ -769,7 +896,8 @@ initCloud();
 if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude\.ai|claudeusercontent/.test(location.hostname)){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 setTimeout(()=>{$('splash').classList.add('out');setTimeout(()=>$('splash').remove(),700);whatsNew()},2300);
 setInterval(()=>{if(!sheet)render()},60000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!sheet)render()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)return;if(!sheet)render();showPasteBar()});
+showPasteBar();
 </script>
 </body>
 </html>
