@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Finn">
+<meta name="theme-color" content="#09090e">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<title>Finn</title>
+<style>
+:root{--bg:#09090e;--card:rgba(255,255,255,.06);--sec:rgba(255,255,255,.62);--ter:rgba(255,255,255,.35);--tint:#5ca8ff;color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{background:var(--bg);color:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+body.noscroll{overflow:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:disabled{opacity:.25}
+input,textarea,select{font:inherit;color:#fff}
+.rounded{font-family:ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif}
+svg.i{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;display:block}
+.grad{background:linear-gradient(135deg,var(--c1),var(--c2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+
+.bg-glow{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.bg-glow::before,.bg-glow::after{content:"";position:absolute;width:380px;height:380px;border-radius:50%;filter:blur(110px)}
+.bg-glow::before{background:rgba(92,168,255,.2);left:-200px;top:-170px}
+.bg-glow::after{background:rgba(56,235,143,.10);right:-180px;top:45%}
+
+#app{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 10px) 20px calc(env(safe-area-inset-bottom) + 34px)}
+.anim{animation:in .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes in{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+.press{transition:transform .18s,opacity .18s}
+.press:active{transform:scale(.97);opacity:.85}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;height:44px;margin-bottom:10px}
+.topbar .right{display:flex;align-items:center;gap:14px}
+.back{display:flex;align-items:center;gap:2px;font-size:17px;font-weight:500;margin-left:-6px}
+.txtbtn{font-size:17px;font-weight:600}
+
+.label{font-size:12px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--sec);margin-bottom:12px}
+.section{margin-top:26px}
+.t1{font-size:17px;font-weight:650}
+.t2{font-size:14px;color:var(--sec)}
+.card{background:var(--card);border:1px solid rgba(255,255,255,.1);border-radius:20px}
+
+/* Home */
+.hello{font-size:34px;font-weight:800;margin-top:2px}
+.today{display:flex;padding:18px;margin-top:22px}
+.today .half{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.today .half+.half{padding-left:16px;margin-left:16px;border-left:1px solid rgba(255,255,255,.1)}
+.mini{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700}
+.ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cat{position:relative;overflow:hidden;min-height:168px;padding:16px;display:flex;flex-direction:column;border-radius:22px;background:var(--card);border:1px solid}
+.cat .glow{position:absolute;width:130px;height:130px;border-radius:50%;filter:blur(40px);right:-40px;top:-40px}
+.cat-top{display:flex;justify-content:space-between;align-items:flex-start;position:relative}
+.cat-ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center}
+.cat-title{font-size:20px;font-weight:800;margin-top:auto;padding-top:18px;position:relative}
+.cat-detail{font-size:13px;color:var(--sec);margin-top:3px;position:relative;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ph{min-height:168px;border-radius:22px;border:1.2px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.025);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:16px}
+.ph-ic{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.05);display:grid;place-items:center;color:var(--ter)}
+.ph b{font-size:15px;color:var(--sec)}
+.ph span{font-size:12px;color:var(--ter)}
+
+/* Header */
+.header{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.header .ic{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;flex-shrink:0}
+.header h1{font-size:32px;font-weight:800;line-height:1.1}
+
+/* Kalender */
+.weeknav{display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:600;color:var(--sec);margin-bottom:10px}
+.weeknav div{display:flex;gap:18px}
+.week{display:flex;gap:6px}
+.day{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 0;border-radius:15px;background:rgba(255,255,255,.05);transition:background .2s}
+.day .dw{font-size:11px;font-weight:600;color:var(--sec)}
+.day .dn{font-size:17px;font-weight:800}
+.day .dot{width:5px;height:5px;border-radius:50%}
+.day.sel .dw{color:rgba(0,0,0,.65)}
+.day.sel .dn{color:#000}
+.dayhead{display:flex;justify-content:space-between;align-items:center;margin:24px 0 14px}
+.dayhead h2{font-size:20px;font-weight:750}
+.dayhead button{font-size:15px;font-weight:700}
+.list{display:flex;flex-direction:column;gap:10px}
+.ev{display:flex;gap:14px;padding:14px;border-radius:18px;border:1px solid}
+.ev-time{width:48px;text-align:right;display:flex;flex-direction:column;gap:3px;font-variant-numeric:tabular-nums}
+.ev-time b{font-size:15px}
+.ev-time span{font-size:12px;color:var(--sec)}
+.ev-bar{width:4px;border-radius:2px;flex-shrink:0}
+.ev-body{flex:1;min-width:0}
+.ev-title{display:flex;align-items:center;gap:6px;font-weight:650;font-size:16px}
+.ev-title .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-title .rep{color:var(--ter)}
+.now{margin-left:auto;font-size:11px;font-weight:800;color:#000;padding:3px 8px;border-radius:99px}
+.ev-note{font-size:13px;color:var(--sec);margin-top:4px}
+
+/* Sport */
+.rest{display:flex;align-items:center;gap:14px;padding:18px}
+.wk{display:flex;gap:6px}
+.wkd{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;border-radius:14px;background:rgba(255,255,255,.04);font-size:11px;font-weight:600}
+.wke{height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:14px}
+.wke i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.12)}
+.wicon{display:grid;place-items:center;flex-shrink:0}
+.wc{display:flex;align-items:center;gap:14px;padding:14px;margin-bottom:10px}
+.wc-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.days{font-size:12px;font-weight:700}
+.tc{display:block;padding:18px;border-radius:22px;border:1px solid;margin-bottom:10px}
+.tc-top{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;flex:1}
+.bar i{display:block;height:100%;border-radius:3px;transition:width .4s}
+.wh{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.wh h1{font-size:30px;font-weight:800}
+.prog{display:flex;align-items:center;gap:12px;margin-bottom:6px;font-size:13px;font-variant-numeric:tabular-nums}
+.lhead{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--sec);text-transform:uppercase;margin:22px 14px 8px}
+.lhead button{text-transform:none;font-weight:700;font-size:13px}
+
+/* Listen & Formulare */
+.group{background:rgba(255,255,255,.06);border-radius:16px;overflow:hidden;margin-bottom:20px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;min-height:50px;border-bottom:1px solid rgba(255,255,255,.07);width:100%;text-align:left}
+.row:last-child{border-bottom:0}
+.row input[type=text],.row input[type=number],.row textarea{background:none;border:0;outline:none;width:100%;font-size:17px;resize:none}
+.row input.big{font-weight:650}
+.row input[type=date],.row input[type=time],.row select{background:rgba(255,255,255,.1);border:0;border-radius:9px;padding:7px 11px;font-size:17px;-webkit-appearance:none;appearance:none;outline:none;min-width:0}
+::placeholder{color:var(--ter)}
+.glabel{font-size:13px;color:var(--sec);text-transform:uppercase;margin:0 14px 7px}
+.foot{font-size:13px;color:var(--ter);margin:-10px 14px 20px;line-height:1.4}
+.ex .chk{flex-shrink:0}
+.ex-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.ex-n{font-weight:650}
+.ex-n.done{text-decoration:line-through;color:var(--sec)}
+.ex-s{font-size:13px;font-variant-numeric:tabular-nums}
+.ex-note{font-size:12px;color:var(--sec)}
+.ex-ed{display:flex;gap:12px}
+.addrow{justify-content:flex-start;font-weight:650}
+.tints{display:flex;justify-content:space-between;width:100%;padding:4px 2px}
+.tint{width:28px;height:28px;border-radius:50%;position:relative}
+.tint.on::after{content:"";position:absolute;inset:-5px;border:2.5px solid #fff;border-radius:50%}
+.chips{display:flex;gap:6px;width:100%}
+.chip{flex:1;padding:9px 0;border-radius:99px;background:rgba(255,255,255,.08);font-size:13px;font-weight:700}
+.chip.on{background:var(--tint);color:#000}
+.emojis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;width:100%;padding:4px 0}
+.emo{aspect-ratio:1;border-radius:12px;background:rgba(255,255,255,.07);font-size:22px;display:grid;place-items:center}
+.emo.on{background:var(--tint)}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:38px;height:34px;border-radius:9px;background:rgba(255,255,255,.1);font-size:20px;font-weight:600;display:grid;place-items:center}
+.stepper .val{min-width:44px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums;color:var(--tint)}
+.wbtn{padding:0 10px!important;width:auto!important;font-size:14px!important}
+.weight{display:flex;align-items:center;gap:6px}
+.weight input{width:70px!important;text-align:right;color:var(--tint)!important;font-weight:700}
+.danger{width:100%;padding:15px;border-radius:16px;background:rgba(255,107,107,.12);color:#ff6b6b;font-weight:650;font-size:17px;margin-bottom:20px}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:32px 20px}
+.pill{margin-top:6px;padding:10px 18px;border-radius:99px;color:#000;font-weight:700;font-size:15px}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+/* Sheet */
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;animation:fade .25s}
+.sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:560px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#141419;border-radius:26px 26px 0 0;z-index:51;padding:0 16px calc(env(safe-area-inset-bottom) + 24px);animation:up .34s cubic-bezier(.2,.85,.2,1)}
+.sheet.closing{animation:down .25s forwards}.backdrop.closing{animation:fade .25s reverse forwards}
+.sheet-head{position:sticky;top:0;z-index:2;background:#141419;display:flex;justify-content:space-between;align-items:center;padding:16px 4px 14px;font-size:17px}
+.sheet-head b{font-weight:650}
+.grabber{width:38px;height:5px;border-radius:3px;background:rgba(255,255,255,.2);margin:8px auto 0}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(100%)}}
+@keyframes down{to{transform:translateY(100%)}}
+.dialog{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(300px,85vw);background:#1e1e26;border-radius:18px;z-index:61;text-align:center;overflow:hidden;animation:fade .2s}
+.dialog p{padding:20px 18px;font-weight:600}
+.dialog div{display:flex;border-top:1px solid rgba(255,255,255,.1)}
+.dialog button{flex:1;padding:14px;font-size:17px}
+.dialog button+button{border-left:1px solid rgba(255,255,255,.1);color:#ff6b6b;font-weight:650}
+
+.sync{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ter);margin-top:8px}
+.sync i{width:7px;height:7px;border-radius:50%}
+.toast{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top) + 12px);max-width:528px;margin:0 auto;z-index:90;background:#1e1e28;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px 16px;font-size:14px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:drop .4s cubic-bezier(.2,.8,.2,1);transition:opacity .5s,transform .5s}
+.toast.hide{opacity:0;transform:translateY(-20px)}
+@keyframes drop{from{opacity:0;transform:translateY(-20px)}}
+
+/* Splash */
+#splash{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .6s,transform .6s}
+#splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
+.sp-glow{position:absolute;width:460px;height:460px;border-radius:50%;background:radial-gradient(circle,rgba(115,102,255,.45),transparent 65%);filter:blur(30px);animation:pulse 1.6s ease-in-out infinite alternate}
+@keyframes pulse{from{transform:scale(.85)}to{transform:scale(1.12)}}
+.sp-c{position:relative;text-align:center;animation:pop .9s cubic-bezier(.2,.8,.2,1) both}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.92)}}
+.sp-ic{color:#8f8cff;display:flex;justify-content:center;margin-bottom:16px;animation:twinkle 1.2s ease-in-out infinite alternate}
+@keyframes twinkle{from{opacity:.5}}
+.sp-h{font-size:26px;font-weight:500;color:var(--sec)}
+.sp-n{font-size:46px;font-weight:800;background:linear-gradient(#fff,#bfc7ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sp-bar{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 70px);width:150px;height:4px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden}
+.sp-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#5ca8ff,#b37aff);animation:load 2s ease-in-out forwards}
+@keyframes load{to{width:100%}}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div id="splash">
+  <div class="sp-glow"></div>
+  <div class="sp-c">
+    <div class="sp-ic"><svg class="i" width="40" height="40" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></div>
+    <div class="sp-h rounded">Hello,</div>
+    <div class="sp-n rounded">Master Finn</div>
+  </div>
+  <div class="sp-bar"><i></i></div>
+</div>
+<div id="app"></div>
+<div id="overlay"></div>
+
+<script>
+/* ===== Konfiguration ===== */
+const TINTS={blue:'#5ca8ff',purple:'#a880ff',pink:'#ff73bf',red:'#ff6b6b',orange:'#ff9e4d',yellow:'#ffd95a',green:'#38eb8f',teal:'#4de0e6'};
+const CATS={
+  calendar:{title:'Tagesablauf',icon:'calendar',c1:'#5ca8ff',c2:'#9478ff'},
+  sport:{title:'Sport',icon:'dumbbell',c1:'#38eb8f',c2:'#c7f54d'}
+};
+const PLACEHOLDERS=4; // leere Ordner – später durch echte Kategorien ersetzen
+const WD_ORDER=[1,2,3,4,5,6,0];
+const WD_SHORT=['So','Mo','Di','Mi','Do','Fr','Sa'];
+const REPEAT={none:'Nie',daily:'Täglich',weekdays:'Werktags',weekly:'Wöchentlich'};
+const EMOJIS=['🏋️','💪','🏃','🚴','🏊','🧘','🥊','⚽','🏀','🎾','🥾','❤️'];
+
+const ICONS={
+  calendar:'<rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  dumbbell:'<path d="M6 5v14M18 5v14M2.5 9v6M21.5 9v6M6 12h12"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  plusCircle:'<circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="M12 7.5v9M7.5 12h9" stroke="#09090e" stroke-width="2.4"/>',
+  chevL:'<path d="M15 18l-6-6 6-6"/>',chevR:'<path d="M9 18l6-6-6-6"/>',
+  arrowUR:'<path d="M7 17L17 7M8 7h9v9"/>',
+  arrowUp:'<path d="M12 19V5M5 12l7-7 7 7"/>',arrowDown:'<path d="M12 5v14M5 12l7 7 7-7"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  flame:'<path d="M12 22c4 0 7-3 7-7 0-4-3-6-4-10-2 2-3 4-3 6-1-1-2-2-2-4-3 2-5 5-5 8 0 4 3 7 7 7z"/>',
+  repeat:'<path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/>',
+  trash:'<path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/>',
+  moon:'<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  dashed:'<rect x="3" y="3" width="18" height="18" rx="4" stroke-dasharray="4 3"/>',
+  sliders:'<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+  circle:'<circle cx="12" cy="12" r="10"/>',
+  checkCircle:'<circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="M7 12.5l3.3 3.3L17 9" stroke="#09090e" stroke-width="2.4"/>'
+};
+const I=(n,s=22)=>`<svg class="i" width="${s}" height="${s}" viewBox="0 0 24 24">${ICONS[n]}</svg>`;
+
+/* ===== Helfer ===== */
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseYmd=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const sameDay=(a,b)=>ymd(a)===ymd(b);
+const toMin=t=>{const[h,m]=t.split(':').map(Number);return h*60+m};
+const minToT=m=>`${pad(Math.floor(m/60))}:${pad(m%60)}`;
+const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()};
+const longDay=d=>d.toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'});
+const monthYear=d=>d.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${n>>8&255},${n&255},${a})`};
+const fmtNum=n=>Number(n).toLocaleString('de-DE',{maximumFractionDigits:1});
+const $=id=>document.getElementById(id);
+const val=id=>$(id).value;
+
+/* ===== Version (bei jedem Update erhöhen) ===== */
+const APP_VERSION='1.2';
+const APP_CHANGES='Neu: Backup sichern & wiederherstellen – tippe auf die Zeile unter „Hallo, Finn“.';
+
+/* ===== Daten: lokal (sofort) + Cloud-Datenbank (dauerhaft, geräteübergreifend) ===== */
+const KEY='finnapp-v1';
+let S=load();
+function valid(s){return s&&Array.isArray(s.events)&&Array.isArray(s.workouts)}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(valid(s))return s}catch(e){}return sample()}
+function save(){
+  S.updatedAt=Date.now();
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  clearTimeout(sync.t);sync.t=setTimeout(cloudSave,400);
+}
+const sync={state:'local',ref:null,writing:false,pending:false,lastJson:null,t:null};
+async function cloudSave(){
+  if(!sync.ref)return;
+  if(sync.writing){sync.pending=true;return}
+  sync.writing=true;
+  try{
+    do{
+      sync.pending=false;
+      const json=JSON.stringify(S);
+      if(json!==sync.lastJson){await sync.ref.set({json,updatedAt:S.updatedAt||Date.now(),appVersion:APP_VERSION});sync.lastJson=json}
+    }while(sync.pending);
+    setSync('ok');
+  }catch(e){setSync('error')}
+  finally{sync.writing=false}
+}
+async function initCloud(){
+  let db=null;
+  try{if(window.claude&&typeof claude.use==='function')db=await claude.use('db')}catch(e){}
+  if(!db){setSync('local');return}
+  try{sync.ref=db.doc('finn/state')}catch(e){setSync('local');return}
+  setSync('loading');
+  const timer=setTimeout(()=>{if(sync.state==='loading')setSync('offline')},10000);
+  sync.ref.onSnapshot(snap=>{
+    const m=snap.metadata||{};
+    if(!m.fromCache)clearTimeout(timer);
+    if(m.hasPendingWrites)return;
+    if(!snap.exists){if(!m.fromCache)cloudSave();return}
+    const d=snap.data()||{};
+    if(typeof d.json==='string'&&d.json!==sync.lastJson){
+      try{
+        const s=JSON.parse(d.json);
+        if(valid(s)){
+          if((s.updatedAt||0)>=(S.updatedAt||0)){
+            S=s;sync.lastJson=d.json;
+            try{localStorage.setItem(KEY,d.json)}catch(e){}
+            if(!sheet)render();
+          }else cloudSave();
+        }
+      }catch(e){}
+    }
+    if(!m.fromCache)setSync('ok');
+  },()=>{clearTimeout(timer);setSync('error')});
+}
+const SYNC_TXT={ok:['#38eb8f','In der Cloud gesichert'],loading:['#ffd95a','Verbinde …'],offline:['#ff9e4d','Offline – lokal gespeichert'],error:['#ff6b6b','Sync-Fehler – lokal gespeichert'],local:['rgba(255,255,255,.35)','Nur auf diesem Gerät gespeichert']};
+function syncBadge(){const[c,t]=SYNC_TXT[sync.state];return `<button id="sync" class="sync" data-a="backupMenu"><i style="background:${c}"></i>${t} · v${APP_VERSION}<span style="margin-left:2px">›</span></button>`}
+function setSync(s){sync.state=s;const el=$('sync');if(el)el.outerHTML=syncBadge()}
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.classList.add('hide'),5000);setTimeout(()=>d.remove(),5600)}
+function whatsNew(){let seen=null;try{seen=localStorage.getItem('finnapp-version');localStorage.setItem('finnapp-version',APP_VERSION)}catch(e){}if(seen&&seen!==APP_VERSION)toast(`✨ Update ${APP_VERSION}: ${APP_CHANGES}`)}
+function sample(){
+  const t=ymd(new Date());
+  const ex=(name,sets,reps,weight=0)=>({id:uid(),name,sets,reps,weight,note:'',done:false});
+  return{
+    events:[
+      {id:uid(),title:'Aufstehen & Kaffee',date:t,start:'07:00',end:'07:30',note:'Ruhig in den Tag starten',tint:'orange',repeat:'daily'},
+      {id:uid(),title:'Arbeit / Uni',date:t,start:'09:00',end:'13:00',note:'',tint:'blue',repeat:'weekdays'},
+      {id:uid(),title:'Mittagessen',date:t,start:'13:00',end:'14:00',note:'',tint:'yellow',repeat:'daily'},
+      {id:uid(),title:'Training',date:t,start:'18:00',end:'19:30',note:'Siehe Sportplan',tint:'green',repeat:'weekly'},
+      {id:uid(),title:'Abendroutine',date:t,start:'22:00',end:'22:30',note:'',tint:'purple',repeat:'daily'}
+    ],
+    workouts:[
+      {id:uid(),name:'Push',emoji:'🏋️',days:[1,4],tint:'green',note:'Brust, Schultern, Trizeps',exercises:[ex('Bankdrücken',4,8,60),ex('Schulterdrücken',3,10,30),ex('Dips',3,12)]},
+      {id:uid(),name:'Pull',emoji:'💪',days:[2,5],tint:'teal',note:'Rücken & Bizeps',exercises:[ex('Klimmzüge',4,8),ex('Rudern am Kabel',3,12,50),ex('Bizepscurls',3,12,12.5)]},
+      {id:uid(),name:'Beine',emoji:'🏃',days:[3,6],tint:'orange',note:'',exercises:[ex('Kniebeugen',4,8,80),ex('Beinpresse',3,12,120),ex('Wadenheben',4,15,40)]}
+    ]
+  };
+}
+function occurs(e,day){
+  const d=ymd(day);if(d<e.date)return false;
+  switch(e.repeat){
+    case'daily':return true;
+    case'weekdays':{const w=day.getDay();return w!==0&&w!==6}
+    case'weekly':return day.getDay()===parseYmd(e.date).getDay();
+    default:return d===e.date;
+  }
+}
+const eventsOn=day=>S.events.filter(e=>occurs(e,day)).sort((a,b)=>a.start.localeCompare(b.start));
+const workoutsOn=day=>S.workouts.filter(w=>w.days.includes(day.getDay()));
+const nextEvent=()=>{const n=nowMin();return eventsOn(new Date()).find(e=>toMin(e.end)>n)};
+const upsert=(arr,item)=>{const i=arr.findIndex(x=>x.id===item.id);if(i>=0)arr[i]=item;else arr.push(item)};
+const daysText=w=>{const d=WD_ORDER.filter(x=>w.days.includes(x)).map(x=>WD_SHORT[x]);return d.length?d.join(' · '):'Kein fester Tag'};
+const summary=x=>`${x.sets} × ${x.reps}${x.weight>0?` · ${fmtNum(x.weight)} kg`:''}`;
+const doneCount=w=>w.exercises.filter(x=>x.done).length;
+
+/* ===== Navigation (#calendar, #sport, #workout-<id>, #p-<n>) ===== */
+let ui={sel:new Date(),edit:false};
+let lastRoute=null;
+function route(){
+  const h=location.hash.slice(1);
+  if(h==='calendar'||h==='sport')return{name:h};
+  if(h.startsWith('workout-'))return{name:'workout',arg:h.slice(8)};
+  if(h.startsWith('p-'))return{name:'p',arg:+h.slice(2)};
+  return{name:'home'};
+}
+const go=h=>{location.hash=h};
+
+function render(){
+  const r=route();
+  let html;
+  switch(r.name){
+    case'calendar':html=calendarView();break;
+    case'sport':html=sportView();break;
+    case'workout':html=workoutView(r.arg);break;
+    case'p':html=placeholderView(r.arg);break;
+    default:html=homeView();
+  }
+  const key=location.hash;
+  const isNew=key!==lastRoute;
+  $('app').innerHTML=`<div class="${isNew?'anim':''}">${html}</div>`;
+  if(isNew){window.scrollTo(0,0);if(r.name!=='workout')ui.edit=false}
+  lastRoute=key;
+}
+addEventListener('hashchange',render);
+
+/* ===== Bausteine ===== */
+function topbar(back,right,tint){
+  return `<div class="topbar"><button class="back" data-a="go" data-v="${back}" style="color:${tint}">${I('chevL',26)}Zurück</button><div class="right">${right||''}</div></div>`;
+}
+function header(c,sub){
+  return `<div class="header"><div class="ic" style="background:${rgba(c.c1,.16)};border:1px solid ${rgba(c.c1,.35)};color:${c.c1}">${I(c.icon,24)}</div>
+  <div><h1 class="rounded grad" style="--c1:${c.c1};--c2:${c.c2}">${esc(c.title)}</h1>${sub?`<div class="t2" style="margin-top:2px">${esc(sub)}</div>`:''}</div></div>`;
+}
+function empty(icon,title,msg,t,btn,act){
+  return `<div class="card empty" style="border-color:${rgba(t,.2)}"><span style="color:${t}">${I(icon,34)}</span><div class="t1">${title}</div><div class="t2">${msg}</div>${btn?`<button class="pill press" data-a="${act}" style="background:${t}">${btn}</button>`:''}</div>`;
+}
+const progBar=(p,t)=>`<div class="bar"><i style="width:${Math.round(p*100)}%;background:linear-gradient(90deg,${t},${rgba(t,.6)})"></i></div>`;
+const wIcon=(w,s)=>`<div class="wicon" style="width:${s}px;height:${s}px;border-radius:${s*.29}px;background:${rgba(TINTS[w.tint],.16)};font-size:${Math.round(s*.46)}px">${w.emoji}</div>`;
+
+/* ===== Startseite ===== */
+function greeting(){const h=new Date().getHours();return h>=5&&h<11?'Guten Morgen, Finn':h<17&&h>=11?'Hallo, Finn':h>=17&&h<22?'Guten Abend, Finn':'Gute Nacht, Finn'}
+function catCard(id,detail){
+  const c=CATS[id];
+  return `<a class="cat press" href="#${id}" style="border-color:${rgba(c.c1,.22)}"><div class="glow" style="background:${rgba(c.c1,.3)}"></div>
+  <div class="cat-top"><div class="cat-ic" style="background:${rgba(c.c1,.16)};color:${c.c1}">${I(c.icon)}</div><span style="color:var(--ter)">${I('arrowUR',16)}</span></div>
+  <div class="cat-title rounded grad" style="--c1:${c.c1};--c2:${c.c2}">${c.title}</div><div class="cat-detail">${esc(detail)}</div></a>`;
+}
+function homeView(){
+  const now=new Date(),nx=nextEvent(),tr=workoutsOn(now),n=eventsOn(now).length;
+  return `
+  <div class="label" style="margin-top:14px">${esc(longDay(now))}</div>
+  <div class="hello rounded">${greeting()}</div>
+  ${syncBadge()}
+  <div class="card today">
+    <a class="half" href="#calendar"><div class="mini" style="color:${CATS.calendar.c1}">${I('clock',14)} Als Nächstes</div>
+      <div class="t1 ellipsis">${nx?esc(nx.title):'Nichts mehr geplant'}</div><div class="t2">${nx?`${nx.start} – ${nx.end}`:'Genieß den Tag'}</div></a>
+    <a class="half" href="#sport"><div class="mini" style="color:${CATS.sport.c1}">${I('flame',14)} Training</div>
+      <div class="t1 ellipsis">${tr[0]?esc(tr[0].name):'Ruhetag'}</div><div class="t2">${tr[0]?`${doneCount(tr[0])}/${tr[0].exercises.length} erledigt`:'Erholung zählt auch'}</div></a>
+  </div>
+  <div class="section"><div class="label">Ordner</div><div class="grid">
+    ${catCard('calendar',n?`${n} Termin${n===1?'':'e'} heute`:'Heute keine Termine')}
+    ${catCard('sport',tr.length?'Heute: '+tr.map(w=>w.name).join(', '):'Heute Ruhetag')}
+    ${Array.from({length:PLACEHOLDERS},(_,i)=>`<a class="ph press" href="#p-${i+1}"><div class="ph-ic">${I('plus',20)}</div><b>Platzhalter ${i+1}</b><span>Frei für eine neue Kategorie</span></a>`).join('')}
+  </div></div>`;
+}
+
+/* ===== Tagesablauf ===== */
+function calendarView(){
+  const c=CATS.calendar,sel=ui.sel,today=new Date(),isToday=sameDay(sel,today),n=nowMin();
+  const start=addDays(sel,-((sel.getDay()+6)%7));
+  const days=[...Array(7)].map((_,i)=>addDays(start,i));
+  const items=eventsOn(sel);
+  const pastDay=ymd(sel)<ymd(today);
+  return `${topbar('',`<button data-a="newEvent" style="color:${c.c1}">${I('plusCircle',30)}</button>`,c.c1)}
+  ${header(c,'Dein Tag im Überblick')}
+  <div class="weeknav"><span>${monthYear(sel)}</span><div>
+    <button data-a="week" data-v="-1" style="color:${c.c1}">${I('chevL',22)}</button>
+    <button data-a="week" data-v="1" style="color:${c.c1}">${I('chevR',22)}</button></div></div>
+  <div class="week">${days.map(d=>{
+    const s=sameDay(d,sel),t=sameDay(d,today),has=eventsOn(d).length>0;
+    return `<button class="day ${s?'sel':''}" data-a="day" data-v="${ymd(d)}" style="${s?`background:${c.c1};`:''}${t&&!s?`box-shadow:inset 0 0 0 1px ${rgba(c.c1,.55)};`:''}">
+      <span class="dw">${WD_SHORT[d.getDay()]}</span><span class="dn rounded" style="${t&&!s?`color:${c.c1}`:''}">${d.getDate()}</span>
+      <span class="dot" style="background:${has?(s?'rgba(0,0,0,.55)':c.c1):'transparent'}"></span></button>`}).join('')}</div>
+  <div class="dayhead"><h2>${esc(longDay(sel))}</h2>${isToday?'':`<button data-a="today" style="color:${c.c1}">Heute</button>`}</div>
+  ${items.length?`<div class="list">${items.map(e=>{
+      const t=TINTS[e.tint]||c.c1;
+      const now=isToday&&toMin(e.start)<=n&&n<toMin(e.end);
+      const past=pastDay||(isToday&&toMin(e.end)<=n);
+      return `<div class="ev press" data-a="editEvent" data-v="${e.id}" style="background:${now?rgba(t,.15):'var(--card)'};border-color:${rgba(t,now?.55:.15)};opacity:${past?.5:1}">
+        <div class="ev-time"><b>${e.start}</b><span>${e.end}</span></div><div class="ev-bar" style="background:${t}"></div>
+        <div class="ev-body"><div class="ev-title"><span class="name">${esc(e.title)}</span>${e.repeat!=='none'?`<span class="rep">${I('repeat',12)}</span>`:''}${now?`<span class="now" style="background:${t}">JETZT</span>`:''}</div>
+        ${e.note?`<div class="ev-note">${esc(e.note)}</div>`:''}</div></div>`}).join('')}</div>`
+    :empty('sun','Freier Tag','Für diesen Tag ist noch nichts geplant.',c.c1,'Termin hinzufügen','newEvent')}`;
+}
+
+/* ===== Sport ===== */
+function sportView(){
+  const c=CATS.sport,now=new Date(),today=workoutsOn(now);
+  return `${topbar('',`<button data-a="newWorkout" style="color:${c.c1}">${I('plusCircle',30)}</button>`,c.c1)}
+  ${header(c,'Dein persönlicher Trainingsplan')}
+  <div class="label">Heute</div>
+  ${today.length?today.map(w=>{const t=TINTS[w.tint];return `<a class="tc press" href="#workout-${w.id}" style="background:linear-gradient(135deg,${rgba(t,.18)},var(--card));border-color:${rgba(t,.35)}">
+      <div class="tc-top">${wIcon(w,56)}<div style="flex:1;min-width:0"><div class="rounded" style="font-size:21px;font-weight:800">${esc(w.name)}</div><div class="t2 ellipsis">${esc(w.note||w.exercises.length+' Übungen')}</div></div>
+      <b style="color:${t};font-variant-numeric:tabular-nums">${doneCount(w)}/${w.exercises.length}</b></div>
+      ${progBar(w.exercises.length?doneCount(w)/w.exercises.length:0,t)}</a>`}).join('')
+    :`<div class="card rest" style="border-color:${rgba(c.c1,.2)}"><span style="color:${c.c1}">${I('moon',28)}</span><div><div class="t1">Ruhetag</div><div class="t2">Heute ist kein Training geplant.</div></div></div>`}
+  <div class="section"><div class="label">Diese Woche</div><div class="wk">${WD_ORDER.map(d=>{
+    const isT=d===now.getDay(),pl=S.workouts.filter(w=>w.days.includes(d));
+    return `<div class="wkd" style="${isT?`background:${rgba(c.c1,.12)};box-shadow:inset 0 0 0 1px ${rgba(c.c1,.5)};`:''}">
+      <span style="color:${isT?c.c1:'var(--sec)'}">${WD_SHORT[d]}</span><div class="wke">${pl.length?pl.slice(0,3).map(w=>`<span>${w.emoji}</span>`).join(''):'<i></i>'}</div></div>`}).join('')}</div></div>
+  <div class="section"><div class="label">Trainingsplan</div>
+  ${S.workouts.length?S.workouts.map(w=>{const t=TINTS[w.tint];return `<a class="wc card press" href="#workout-${w.id}" style="border-color:${rgba(t,.2)}">${wIcon(w,52)}
+      <div class="wc-b"><div class="t1">${esc(w.name)}</div><div class="t2">${w.exercises.length} Übung${w.exercises.length===1?'':'en'}</div><div class="days" style="color:${t}">${daysText(w)}</div></div>
+      <span style="color:var(--ter)">${I('chevR',18)}</span></a>`}).join('')
+    :empty('dumbbell','Noch kein Training','Lege dein erstes Training an und füge Übungen hinzu.',c.c1,'Training anlegen','newWorkout')}
+  </div>`;
+}
+
+function workoutView(id){
+  const w=S.workouts.find(x=>x.id===id);
+  if(!w){setTimeout(()=>go('sport'));return''}
+  const t=TINTS[w.tint],n=w.exercises.length,done=doneCount(w);
+  return `${topbar('sport',`<button class="txtbtn" data-a="toggleEdit" style="color:${t}">${ui.edit?'Fertig':'Bearbeiten'}</button>
+    <button data-a="editWorkout" data-v="${w.id}" style="color:${t}">${I('sliders',24)}</button>`,t)}
+  <div class="wh">${wIcon(w,60)}<div><h1 class="rounded" style="color:${t}">${esc(w.name)}</h1><div class="t2" style="font-weight:600">${daysText(w)}</div></div></div>
+  ${w.note?`<p class="t2" style="margin-bottom:14px">${esc(w.note)}</p>`:''}
+  ${n?`<div class="prog">${progBar(done/n,t)}<b style="color:${t}">${done}/${n}</b></div>`:''}
+  <div class="lhead"><span>Übungen</span>${done?`<button data-a="resetEx" style="color:${t}">Zurücksetzen</button>`:''}</div>
+  <div class="group">
+    ${w.exercises.map((x,i)=>`<div class="row ex">
+      <button class="chk" data-a="toggleEx" data-v="${x.id}" style="color:${x.done?t:'var(--ter)'}">${I(x.done?'checkCircle':'circle',27)}</button>
+      <div class="ex-b" data-a="editEx" data-v="${x.id}"><div class="ex-n ${x.done?'done':''}">${esc(x.name)}</div><div class="ex-s" style="color:${t}">${summary(x)}</div>${x.note?`<div class="ex-note">${esc(x.note)}</div>`:''}</div>
+      ${ui.edit?`<div class="ex-ed"><button data-a="moveEx" data-v="${x.id}:-1" ${i===0?'disabled':''}>${I('arrowUp',19)}</button><button data-a="moveEx" data-v="${x.id}:1" ${i===n-1?'disabled':''}>${I('arrowDown',19)}</button><button data-a="delEx" data-v="${x.id}" style="color:#ff6b6b">${I('trash',19)}</button></div>`:''}
+    </div>`).join('')}
+    <button class="row addrow" data-a="newEx" style="color:${t}">${I('plusCircle',24)} Übung hinzufügen</button>
+  </div>
+  <p class="foot">Tippen zum Bearbeiten · Kreis zum Abhaken · „Bearbeiten“ zum Sortieren und Löschen</p>`;
+}
+
+/* ===== Platzhalter ===== */
+function placeholderView(n){
+  const c={title:`Platzhalter ${n}`,icon:'dashed',c1:'#a3a3ae',c2:'#66666f'};
+  return `${topbar('','', '#ffffff')}${header(c,'Noch keine Inhalte')}
+  ${empty('dashed','Hier kommt bald etwas hin','Dieser Ordner ist reserviert. Sobald du weißt, was hier rein soll, wird er zu einer eigenen Kategorie.','#bdbdc7')}`;
+}
+
+/* ===== Sheets (Editoren) ===== */
+let sheet=null,draft=null;
+function openSheet(title,body,tint,onSave){
+  $('overlay').innerHTML=`<div class="backdrop" data-a="closeSheet"></div>
+  <div class="sheet" id="sheet" style="--tint:${tint}"><div class="grabber"></div>
+   <div class="sheet-head"><button data-a="closeSheet" style="color:var(--tint)">${onSave?'Abbrechen':'Fertig'}</button><b>${title}</b>${onSave?'<button data-a="saveSheet" style="color:var(--tint);font-weight:700">Sichern</button>':'<span style="width:70px"></span>'}</div>
+   ${body}</div>`;
+  sheet={onSave};document.body.classList.add('noscroll');
+}
+function closeSheet(){
+  const s=$('sheet'),b=document.querySelector('.backdrop');
+  if(s){s.classList.add('closing');b.classList.add('closing')}
+  sheet=null;document.body.classList.remove('noscroll');
+  setTimeout(()=>{if(!sheet)$('overlay').innerHTML=''},240);
+}
+function confirmDialog(text,onYes,yesLabel='Löschen'){
+  const d=document.createElement('div');
+  d.innerHTML=`<div class="backdrop" style="z-index:60"></div><div class="dialog"><p>${esc(text)}</p><div><button>Abbrechen</button><button>${esc(yesLabel)}</button></div></div>`;
+  document.body.appendChild(d);
+  const [no,yes]=d.querySelectorAll('.dialog button');
+  no.onclick=()=>d.remove();
+  yes.onclick=()=>{d.remove();onYes()};
+}
+const shake=id=>{const el=$(id);el.closest('.group').classList.remove('shake');void el.offsetWidth;el.closest('.group').classList.add('shake');el.focus()};
+const tintPicker=sel=>`<div class="tints">${Object.entries(TINTS).map(([k,v])=>`<button class="tint ${k===sel?'on':''}" data-a="pickTint" data-v="${k}" style="background:${v}"></button>`).join('')}</div>`;
+
+function openEventEditor(e){
+  const isNew=!e;
+  if(isNew){
+    const today=sameDay(ui.sel,new Date()),h=today?Math.min(new Date().getHours()+1,23):9;
+    draft={id:uid(),title:'',date:ymd(ui.sel),start:`${pad(h)}:00`,end:h<23?`${pad(h+1)}:00`:'23:59',note:'',tint:'blue',repeat:'none'};
+  }else draft={...e};
+  const body=`
+  <div class="group"><div class="row"><input type="text" class="big" id="f-title" placeholder="Titel" value="${esc(draft.title)}"></div>
+    <div class="row"><textarea id="f-note" rows="2" placeholder="Notiz (optional)">${esc(draft.note)}</textarea></div></div>
+  <div class="glabel">Zeit</div>
+  <div class="group">
+    <div class="row"><span>${draft.repeat==='none'?'Datum':'Ab Datum'}</span><input type="date" id="f-date" value="${draft.date}"></div>
+    <div class="row"><span>Beginn</span><input type="time" id="f-start" value="${draft.start}"></div>
+    <div class="row"><span>Ende</span><input type="time" id="f-end" value="${draft.end}"></div>
+    <div class="row"><span>Wiederholen</span><select id="f-rep">${Object.entries(REPEAT).map(([k,l])=>`<option value="${k}" ${k===draft.repeat?'selected':''}>${l}</option>`).join('')}</select></div>
+  </div>
+  <div class="glabel">Farbe</div><div class="group"><div class="row">${tintPicker(draft.tint)}</div></div>
+  ${isNew?'':`<button class="danger" data-a="delEvent">Termin löschen</button>${draft.repeat!=='none'?'<p class="foot">Änderungen gelten für alle Wiederholungen dieses Termins.</p>':''}`}`;
+  openSheet(isNew?'Neuer Termin':'Termin bearbeiten',body,TINTS[draft.tint],()=>{
+    const title=val('f-title').trim();
+    if(!title){shake('f-title');return false}
+    Object.assign(draft,{title,note:val('f-note').trim(),date:val('f-date')||draft.date,start:val('f-start')||'09:00',end:val('f-end')||'10:00',repeat:val('f-rep')});
+    if(toMin(draft.end)<=toMin(draft.start))draft.end=minToT(Math.min(toMin(draft.start)+60,23*60+59));
+    upsert(S.events,draft);save();render();
+  });
+  draft._prevStart=draft.start;
+  if(isNew)setTimeout(()=>$('f-title')&&$('f-title').focus(),350);
+}
+
+function openWorkoutEditor(w){
+  const isNew=!w;
+  draft=w?JSON.parse(JSON.stringify(w)):{id:uid(),name:'',emoji:'🏋️',days:[],tint:'green',note:'',exercises:[]};
+  const body=`
+  <div class="group"><div class="row"><span id="f-emo" style="font-size:26px">${draft.emoji}</span><input type="text" class="big" id="f-name" placeholder="Name (z. B. Push, Laufen …)" value="${esc(draft.name)}"></div>
+    <div class="row"><textarea id="f-note" rows="2" placeholder="Beschreibung (optional)">${esc(draft.note)}</textarea></div></div>
+  <div class="glabel">Trainingstage</div>
+  <div class="group"><div class="row"><div class="chips">${WD_ORDER.map(d=>`<button class="chip ${draft.days.includes(d)?'on':''}" data-a="pickDay" data-v="${d}">${WD_SHORT[d]}</button>`).join('')}</div></div></div>
+  <div class="glabel">Symbol</div>
+  <div class="group"><div class="row"><div class="emojis">${EMOJIS.map(e=>`<button class="emo ${e===draft.emoji?'on':''}" data-a="pickEmoji" data-v="${e}">${e}</button>`).join('')}</div></div></div>
+  <div class="glabel">Farbe</div><div class="group"><div class="row">${tintPicker(draft.tint)}</div></div>
+  ${isNew?'':`<button class="danger" data-a="delWorkout">Training löschen</button>`}`;
+  openSheet(isNew?'Neues Training':'Training bearbeiten',body,TINTS[draft.tint],()=>{
+    const name=val('f-name').trim();
+    if(!name){shake('f-name');return false}
+    draft.name=name;draft.note=val('f-note').trim();
+    upsert(S.workouts,draft);save();
+    if(isNew)go('workout-'+draft.id);else render();
+  });
+}
+
+function openExerciseEditor(wid,x){
+  const isNew=!x,w=S.workouts.find(v=>v.id===wid);
+  draft=x?{...x}:{id:uid(),name:'',sets:3,reps:10,weight:0,note:'',done:false};
+  const body=`
+  <div class="group"><div class="row"><input type="text" class="big" id="f-name" placeholder="Übung (z. B. Bankdrücken)" value="${esc(draft.name)}"></div></div>
+  <div class="glabel">Umfang</div>
+  <div class="group">
+    <div class="row"><span>Sätze</span><div class="stepper"><button data-a="step" data-v="sets:-1">−</button><span class="val" id="v-sets">${draft.sets}</span><button data-a="step" data-v="sets:1">+</button></div></div>
+    <div class="row"><span>Wiederholungen</span><div class="stepper"><button data-a="step" data-v="reps:-1">−</button><span class="val" id="v-reps">${draft.reps}</span><button data-a="step" data-v="reps:1">+</button></div></div>
+    <div class="row"><span>Gewicht</span><div class="weight stepper"><button class="wbtn" data-a="wstep" data-v="-2.5">−2,5</button><input type="text" inputmode="decimal" id="f-w" value="${draft.weight?fmtNum(draft.weight):''}" placeholder="0"><span style="color:var(--sec)">kg</span><button class="wbtn" data-a="wstep" data-v="2.5">+2,5</button></div></div>
+  </div>
+  <div class="glabel">Notiz</div>
+  <div class="group"><div class="row"><textarea id="f-note" rows="2" placeholder="z. B. Pause 90 s, auf Technik achten">${esc(draft.note)}</textarea></div></div>
+  ${isNew?'':`<button class="danger" data-a="delExSheet">Übung löschen</button>`}`;
+  openSheet(isNew?'Neue Übung':'Übung bearbeiten',body,TINTS[w.tint],()=>{
+    const name=val('f-name').trim();
+    if(!name){shake('f-name');return false}
+    draft.name=name;draft.note=val('f-note').trim();draft.weight=readWeight();
+    upsert(w.exercises,draft);save();render();
+  });
+  draft._wid=wid;
+}
+const readWeight=()=>Math.max(0,parseFloat((val('f-w')||'0').replace(',','.'))||0);
+
+/* ===== Backup ===== */
+function openBackup(){
+  const t='#5ca8ff';
+  const body=`
+  <div class="group"><div class="row" style="display:block;line-height:1.45">
+    <div class="t1" style="margin-bottom:4px">Datensicherung</div>
+    <div class="t2">${sync.state==='ok'?'Deine Daten werden automatisch in der Cloud gesichert. Zusätzlich kannst du hier eine Backup-Datei speichern.':'Deine Daten liegen auf diesem iPhone. Speichere ab und zu ein Backup in der Dateien-App, damit nichts verloren geht.'}</div>
+  </div></div>
+  <div class="group">
+    ${window.claude?'':`<button class="row addrow" data-a="exportData" style="color:${t}">⬆︎&nbsp; Backup sichern</button>`}
+    <label class="row addrow" style="color:${t};cursor:pointer">⬇︎&nbsp; Backup laden<input type="file" id="f-import" accept=".json,application/json" style="display:none"></label>
+  </div>
+  <p class="foot">${S.events.length} Termine · ${S.workouts.length} Trainings · Version ${APP_VERSION}</p>`;
+  openSheet('Backup',body,t,null);
+}
+async function exportData(){
+  const json=JSON.stringify(S,null,1);
+  const name=`Finn-Backup-${ymd(new Date())}.json`;
+  try{
+    const file=new File([json],name,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}
+  }catch(e){if(e&&e.name==='AbortError')return}
+  try{
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([json],{type:'application/json'}));a.download=name;
+    document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  }catch(e){toast('Backup konnte nicht gespeichert werden.')}
+}
+function importData(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    let s=null;try{s=JSON.parse(r.result)}catch(e){}
+    if(!valid(s)){toast('Das ist keine gültige Finn-Backup-Datei.');return}
+    confirmDialog(`Backup laden? (${s.events.length} Termine, ${s.workouts.length} Trainings) – die aktuellen Daten werden ersetzt.`,()=>{
+      S=s;save();closeSheet();render();toast('✅ Backup geladen');
+    },'Laden');
+  };
+  r.readAsText(file);
+}
+
+/* ===== Aktionen ===== */
+const curWorkout=()=>S.workouts.find(w=>w.id===route().arg);
+const A={
+  go:v=>go(v),
+  week:v=>{ui.sel=addDays(ui.sel,7*v);render()},
+  day:v=>{ui.sel=parseYmd(v);render()},
+  today:()=>{ui.sel=new Date();render()},
+  newEvent:()=>openEventEditor(null),
+  editEvent:v=>openEventEditor(S.events.find(e=>e.id===v)),
+  delEvent:()=>confirmDialog('Termin wirklich löschen?',()=>{const id=draft.id;S.events=S.events.filter(e=>e.id!==id);save();closeSheet();render()}),
+  newWorkout:()=>openWorkoutEditor(null),
+  editWorkout:v=>openWorkoutEditor(S.workouts.find(w=>w.id===v)),
+  delWorkout:()=>confirmDialog('Training mit allen Übungen löschen?',()=>{const id=draft.id;S.workouts=S.workouts.filter(w=>w.id!==id);save();closeSheet();go('sport')}),
+  toggleEdit:()=>{ui.edit=!ui.edit;render()},
+  toggleEx:v=>{const x=curWorkout().exercises.find(e=>e.id===v);x.done=!x.done;save();render()},
+  resetEx:()=>{curWorkout().exercises.forEach(x=>x.done=false);save();render()},
+  newEx:()=>openExerciseEditor(route().arg,null),
+  editEx:v=>{if(ui.edit)return;const w=curWorkout();openExerciseEditor(w.id,w.exercises.find(x=>x.id===v))},
+  moveEx:v=>{const[id,d]=v.split(':');const ex=curWorkout().exercises;const i=ex.findIndex(x=>x.id===id),j=i+ +d;if(j<0||j>=ex.length)return;[ex[i],ex[j]]=[ex[j],ex[i]];save();render()},
+  delEx:v=>{const w=curWorkout();const x=w.exercises.find(e=>e.id===v);confirmDialog(`„${x.name}“ löschen?`,()=>{w.exercises=w.exercises.filter(e=>e.id!==v);save();render()})},
+  delExSheet:()=>confirmDialog('Übung wirklich löschen?',()=>{const w=S.workouts.find(v=>v.id===draft._wid);w.exercises=w.exercises.filter(e=>e.id!==draft.id);save();closeSheet();render()}),
+  closeSheet:()=>closeSheet(),
+  backupMenu:()=>openBackup(),
+  exportData:()=>exportData(),
+  saveSheet:()=>{if(sheet&&sheet.onSave()!==false)closeSheet()},
+  pickTint:(v,el)=>{draft.tint=v;el.parentNode.querySelectorAll('.tint').forEach(b=>b.classList.toggle('on',b===el));$('sheet').style.setProperty('--tint',TINTS[v])},
+  pickDay:(v,el)=>{const d=+v;draft.days=draft.days.includes(d)?draft.days.filter(x=>x!==d):[...draft.days,d];el.classList.toggle('on')},
+  pickEmoji:(v,el)=>{draft.emoji=v;el.parentNode.querySelectorAll('.emo').forEach(b=>b.classList.toggle('on',b===el));$('f-emo').textContent=v},
+  step:v=>{const[k,d]=v.split(':');const max=k==='sets'?20:200;draft[k]=Math.min(max,Math.max(1,draft[k]+ +d));$('v-'+k).textContent=draft[k]},
+  wstep:v=>{const w=Math.max(0,readWeight()+ +v);$('f-w').value=w?fmtNum(w):''}
+};
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-a]');
+  if(!el||el.disabled)return;
+  const fn=A[el.dataset.a];
+  if(fn){e.preventDefault();fn(el.dataset.v,el)}
+});
+document.addEventListener('change',e=>{if(e.target.id==='f-import'&&e.target.files[0])importData(e.target.files[0])});
+// Beim Verschieben des Beginns die Dauer beibehalten
+document.addEventListener('change',e=>{
+  if(e.target.id==='f-start'&&draft&&draft._prevStart){
+    const dur=toMin(val('f-end'))-toMin(draft._prevStart);
+    const ns=toMin(e.target.value);
+    if(dur>0&&!isNaN(ns))$('f-end').value=minToT(Math.min(ns+dur,23*60+59));
+    draft._prevStart=e.target.value;
+  }
+});
+
+/* ===== Start ===== */
+render();
+initCloud();
+if('serviceWorker' in navigator&&location.protocol==='https:'&&!/claude\.ai|claudeusercontent/.test(location.hostname)){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+setTimeout(()=>{$('splash').classList.add('out');setTimeout(()=>$('splash').remove(),700);whatsNew()},2300);
+setInterval(()=>{if(!sheet)render()},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!sheet)render()});
+</script>
+</body>
+</html>
